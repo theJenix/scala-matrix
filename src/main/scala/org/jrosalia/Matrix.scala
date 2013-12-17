@@ -8,27 +8,27 @@ abstract class SemiRing[A] {
 }
 
 import Matrix._
-class Matrix(val n: Int, val m: Int, val data: Seq[Value], val arg: Option[Double] = None)(implicit op: SemiRing[Value]) {
+class Matrix(val n: Int, val m: Int, val data: Seq[Value], val args: Map[String,Double] = Map.empty[String,Double])(implicit op: SemiRing[Value]) {
   require(data.length == n * m)
 
-  def apply(v: Double) =
-    new Matrix(n, m, resolve(v).map(liftToFunction(_)))
+  def apply(args: Map[String, Double]) =
+    new Matrix(n, m, resolve(args).map(liftToFunction(_)))
 
   def +(that: Value) =
     new Matrix(n, m,
       (for (j <- 0 until m; i <- 0 until n) yield
-          op.add(data(i + j * n), that)), arg)
+          op.add(data(i + j * n), that)), args)
 
   def *(that: Value) =
     new Matrix(n, m,
       (for (j <- 0 until m; i <- 0 until n) yield
-          op.multiply(data(i + j * n), that)), arg)
+          op.multiply(data(i + j * n), that)), args)
 
   def +(that: Matrix) = {
     require(this.n == that.n && this.m == that.m)
     new Matrix(n, that.m, 
       (for (j <- 0 until that.m; i <- 0 until n) yield
-          op.add(data(i + j * n), that.data(i + j * n))), arg)
+          op.add(data(i + j * n), that.data(i + j * n))), args)
   }
 
   def *(that: Matrix) = {
@@ -38,31 +38,37 @@ class Matrix(val n: Int, val m: Int, val data: Seq[Value], val arg: Option[Doubl
         val thisInx = i + k * n;
         val thatInx = k + j * that.m;
         op.multiply(data(thisInx), that.data(thatInx))
-      }).reduce(op.add(_, _))), arg)
+      }).reduce(op.add(_, _))), args)
   }
 
-  def t = new Matrix(m, n, (for (i <- 0 until n; j <- 0 until m) yield data(i + j * n)), arg)
+  def t = new Matrix(m, n, (for (i <- 0 until n; j <- 0 until m) yield data(i + j * n)), args)
 
-  def resolve(v: Double) =
-    for (j <- 0 until m; i <- 0 until n) yield data(i + j * n)(v)
+  def resolve(args: Map[String, Double]) =
+    for (j <- 0 until m; i <- 0 until n) yield data(i + j * n)(args)
     
   override def toString =
-    resolve(arg.getOrElse(0)).grouped(n).toList.transpose.map(_.mkString(" ")).mkString("\n")
+    resolve(args).grouped(n).toList.transpose.map(_.mkString(" ")).mkString("\n")
 }
 
 object Matrix {
 
-  type Value = Double => Double
+  type Value = Map[String,Double] => Double
+
+  implicit class FuncWithArgs(f: Double => Double) {
+    def &(arg: String) =
+      (args:Map[String,Double]) => f(args(arg))
+  }
+  
+  implicit class FuncWithNeg(g: Map[String,Double] => Double) {
+    def unary_-(): Map[String,Double] => Double = v => -g(v)
+    def neg(): Map[String,Double] => Double = v => -g(v)
+  }
 
   import scala.language.implicitConversions
+  implicit def fixUnaryWeirdness(f: () => Map[String,Double] => Double) = f()
   implicit def liftToFunction(v: Double): Value = _ => v
 
-//  implicit class ArithmeticFun(f: Unit => Double) {
-//    def + (that: Unit => Double) = {
-//      _ => f() + that()
-//    }
-//  }
-  implicit object FunctionSemiRing extends SemiRing[Value] {
+  implicit object NamedArgFunctionSemiRing extends SemiRing[Value] {
 
     override def zero = {
       _ => 0.0
@@ -73,21 +79,25 @@ object Matrix {
     }
 
     override def add(f1: Value, f2: Value) = {
-      v => f1(v) + f2(v)
+      args => f1(args) + f2(args)
     }
 
     override def multiply(f1: Value, f2: Value) = {
-      v => f1(v) * f2(v)
+      args => f1(args) * f2(args)
     }
   }
 }
 
 object MatrixTest extends App {
   
+    //  implicit def wrapArg1(v: Double => Double): (Map[String,Double] => Double) = args => v(0)
+  import Math._
+//  val asdf = FuncWithArgs(cos)("theta")
+//  val bsdf = - (Math.cos _ & "theta")
   val I = new Matrix(2, 2, List(1.0, 0.0, 0.0, 1.0))
   val A = new Matrix(2, 1, List(1.0, 1.0))
   //2D rotation matrix
-  val B = new Matrix(2, 2, List(Math.cos _, Math.sin _, v => -Math.sin(v), Math.cos _))
+  val B = new Matrix(2, 2, List(Math.cos _ & "theta", Math.sin _ & "theta", -(Math.sin _ & "theta"), Math.cos _ & "theta"))
   
 //  println(A + 5.0)
 //  println
@@ -95,16 +105,20 @@ object MatrixTest extends App {
 //  println
 //  println((B * I)(Math.PI/2))
 //  println
-  println(B(Math.PI/2) * A)
+  val a1 = Map("theta" -> Math.PI/2)
+  println(B(a1) * A)
 //  println
-  println((B * A)(Math.PI/2))
+//  List.fill(4)(Math.PI/2)
+  println((B * A)(a1))
   println
   //full rotation
-  println(B(Math.PI/2) * B(Math.PI/2) * B(Math.PI/2) * B(Math.PI/2) * A)
+  println(B(a1) * B(a1) * B(a1) * B(a1) * A)
+  println((B * B * B * B)(a1) * A)
   
-  println(B(2 * Math.PI) * A)
+  val a2 = Map("theta" -> 2*Math.PI)
+  println(B(a2) * A)
 
-  println (B(Math.PI/2) t)
+  println (B(a1) t)
   
   println(A * 0)
   println(A * 0)
