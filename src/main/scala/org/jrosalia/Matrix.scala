@@ -61,12 +61,10 @@ object Matrix {
   }
   
   implicit class FuncWithNeg(g: Map[String,Double] => Double) {
-    def unary_-(): Map[String,Double] => Double = v => -g(v)
-    def neg(): Map[String,Double] => Double = v => -g(v)
+    def unary_- : Map[String,Double] => Double = v => -g(v)
   }
 
   import scala.language.implicitConversions
-  implicit def fixUnaryWeirdness(f: () => Map[String,Double] => Double) = f()
   implicit def liftToFunction(v: Double): Value = _ => v
 
   implicit object NamedArgFunctionSemiRing extends SemiRing[Value] {
@@ -99,6 +97,7 @@ object MatrixTest extends App {
   val A = new Matrix(2, 1, List(1.0, 1.0))
   //2D rotation matrix
   val B = new Matrix(2, 2, List(Math.cos _ & "theta", Math.sin _ & "theta", -(Math.sin _ & "theta"), Math.cos _ & "theta"))
+//  val C = new Matrix(2, 2, List(Math.cos _ & "theta2", Math.sin _ & "theta2", -(Math.sin _ & "theta2"), Math.cos _ & "theta2"))
   //TODO: remap B's arguments, to create new matrix from B with same structure but different arguments
 //  B.remap("theta" -> "theta2")
 //  println(A + 5.0)
