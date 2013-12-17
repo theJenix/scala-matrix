@@ -12,7 +12,7 @@ class Matrix(val n: Int, val m: Int, val data: Seq[Value], val arg: Option[Doubl
   require(data.length == n * m)
 
   def apply(v: Double) =
-    new Matrix(n, m, resolve(v).flatten.map(liftToFunction(_)))
+    new Matrix(n, m, resolve(v).map(liftToFunction(_)))
 
   def +(that: Value) =
     new Matrix(n, m,
@@ -44,11 +44,10 @@ class Matrix(val n: Int, val m: Int, val data: Seq[Value], val arg: Option[Doubl
   def t = new Matrix(m, n, (for (i <- 0 until n; j <- 0 until m) yield data(i + j * n)), arg)
 
   def resolve(v: Double) =
-    for (i <- 0 until n) yield for (j <- 0 until m) yield data(i + j * n)(v)
+    for (j <- 0 until m; i <- 0 until n) yield data(i + j * n)(v)
     
-  override def toString = {
-    resolve(arg.getOrElse(0)).map(_.mkString(" ")).mkString("\n")
-  }
+  override def toString =
+    resolve(arg.getOrElse(0)).grouped(n).toList.transpose.map(_.mkString(" ")).mkString("\n")
 }
 
 object Matrix {
@@ -85,14 +84,21 @@ object Matrix {
 
 object MatrixTest extends App {
   
+  val I = new Matrix(2, 2, List(1.0, 0.0, 0.0, 1.0))
   val A = new Matrix(2, 1, List(1.0, 1.0))
   //2D rotation matrix
   val B = new Matrix(2, 2, List(Math.cos _, Math.sin _, v => -Math.sin(v), Math.cos _))
   
-  println(A + 5.0)
-  println
-
+//  println(A + 5.0)
+//  println
+//  println(B(Math.PI/2) * I)
+//  println
+//  println((B * I)(Math.PI/2))
+//  println
   println(B(Math.PI/2) * A)
+//  println
+  println((B * A)(Math.PI/2))
+  println
   //full rotation
   println(B(Math.PI/2) * B(Math.PI/2) * B(Math.PI/2) * B(Math.PI/2) * A)
   
