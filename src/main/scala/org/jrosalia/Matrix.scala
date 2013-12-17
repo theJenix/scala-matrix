@@ -11,9 +11,16 @@ import Matrix._
 class Matrix(val n: Int, val m: Int, val data: Seq[Value], val args: Map[String,Double] = Map.empty[String,Double])(implicit op: SemiRing[Value]) {
   require(data.length == n * m)
 
+//  implicit class ColumnOrder(data: Seq[Value]) {
+//    def apply(r:Int, c:Int) = data(r + c * n)
+//  }
+
+  def apply(r:Int, c:Int) = data(r + c * n)
+
   def apply(args: Map[String, Double]) =
     new Matrix(n, m, resolve(args).map(liftToFunction(_)))
 
+  
   def +(that: Value) =
     new Matrix(n, m,
       (for (j <- 0 until m; i <- 0 until n) yield
@@ -22,29 +29,30 @@ class Matrix(val n: Int, val m: Int, val data: Seq[Value], val args: Map[String,
   def *(that: Value) =
     new Matrix(n, m,
       (for (j <- 0 until m; i <- 0 until n) yield
-          op.multiply(data(i + j * n), that)), args)
+          op.multiply(this(i, j), that)), args)
 
   def +(that: Matrix) = {
     require(this.n == that.n && this.m == that.m)
-    new Matrix(n, that.m, 
-      (for (j <- 0 until that.m; i <- 0 until n) yield
-          op.add(data(i + j * n), that.data(i + j * n))), args)
+    new Matrix(n, m, 
+      (for (j <- 0 until m; i <- 0 until n) yield
+          op.add(this(i, j), that(i, j))), args)
   }
 
   def *(that: Matrix) = {
     require(this.m == that.n)
     new Matrix(n, that.m,
       (for (j <- 0 until that.m; i <- 0 until n) yield (for (k <- 0 until m) yield {
-        val thisInx = i + k * n;
-        val thatInx = k + j * that.m;
-        op.multiply(data(thisInx), that.data(thatInx))
+//        val thisInx = i + k * n;
+//        val thatInx = k + j * that.m;
+        op.multiply(this(i, k), that(k, j))
       }).reduce(op.add(_, _))), args ++ that.args)
   }
 
-  def t = new Matrix(m, n, (for (i <- 0 until n; j <- 0 until m) yield data(i + j * n)), args)
+  def t = new Matrix(m, n, for (i <- 0 until n; j <- 0 until m) yield this(i, j), args)
 
-  def resolve(args: Map[String, Double]) =
-    for (j <- 0 until m; i <- 0 until n) yield data(i + j * n)(args)
+  //TODO: support partial resolution
+  def resolve(args: Map[String, Double]): Seq[Double] =
+     for (j <- 0 until m; i <- 0 until n) yield this(i, j)(args)
     
   override def toString =
     resolve(args).grouped(n).toList.transpose.map(_.mkString(" ")).mkString("\n")
@@ -98,7 +106,8 @@ object MatrixTest extends App {
   val A = new Matrix(2, 1, List(1.0, 1.0))
   //2D rotation matrix
   val B = new Matrix(2, 2, List(Math.cos _ & "theta", Math.sin _ & "theta", -(Math.sin _ & "theta"), Math.cos _ & "theta"))
-  
+  //TODO: remap B's arguments, to create new matrix from B with same structure but different arguments
+//  B.remap("theta" -> "theta2")
 //  println(A + 5.0)
 //  println
 //  println(B(Math.PI/2) * I)
