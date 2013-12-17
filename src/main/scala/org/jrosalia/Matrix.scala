@@ -11,48 +11,41 @@ import Matrix._
 class Matrix(val n: Int, val m: Int, val data: Seq[Value], val args: Map[String,Double] = Map.empty[String,Double])(implicit op: SemiRing[Value]) {
   require(data.length == n * m)
 
-//  implicit class ColumnOrder(data: Seq[Value]) {
-//    def apply(r:Int, c:Int) = data(r + c * n)
-//  }
-
   def apply(r:Int, c:Int) = data(r + c * n)
 
   def apply(args: Map[String, Double]) =
     new Matrix(n, m, resolve(args).map(liftToFunction(_)))
 
+  def columnOrder[A](rows:Int, cols:Int)(f: (Int,Int) => A) =
+    for (j <- 0 until cols; i <- 0 until rows) yield f(i,j)
   
   def +(that: Value) =
-    new Matrix(n, m,
-      (for (j <- 0 until m; i <- 0 until n) yield
-          op.add(data(i + j * n), that)), args)
+    new Matrix(n, m, columnOrder(n,m) {(i,j) => op.add(this(i, j), that)}, args)
 
   def *(that: Value) =
-    new Matrix(n, m,
-      (for (j <- 0 until m; i <- 0 until n) yield
-          op.multiply(this(i, j), that)), args)
+    new Matrix(n, m, columnOrder(n,m) {(i,j) => op.multiply(this(i, j), that)}, args)
 
   def +(that: Matrix) = {
     require(this.n == that.n && this.m == that.m)
-    new Matrix(n, m, 
-      (for (j <- 0 until m; i <- 0 until n) yield
-          op.add(this(i, j), that(i, j))), args)
+    new Matrix(n, m, columnOrder(n,m) {(i,j) => op.add(this(i, j), that(i,j))}, args)
   }
 
   def *(that: Matrix) = {
     require(this.m == that.n)
     new Matrix(n, that.m,
-      (for (j <- 0 until that.m; i <- 0 until n) yield (for (k <- 0 until m) yield {
-//        val thisInx = i + k * n;
-//        val thatInx = k + j * that.m;
-        op.multiply(this(i, k), that(k, j))
-      }).reduce(op.add(_, _))), args ++ that.args)
+      columnOrder(n, that.m) {
+        (i,j) =>
+          (for (k <- 0 until m)
+            yield op.multiply(this(i, k), that(k, j))
+          ).reduce(op.add(_, _))
+      }, args ++ that.args)
   }
 
-  def t = new Matrix(m, n, for (i <- 0 until n; j <- 0 until m) yield this(i, j), args)
+  def t = new Matrix(m, n, columnOrder(m, n) {(i, j) => this(j, i)}, args)
 
   //TODO: support partial resolution
   def resolve(args: Map[String, Double]): Seq[Double] =
-     for (j <- 0 until m; i <- 0 until n) yield this(i, j)(args)
+     columnOrder(n, m) {(i,j) => this(i, j)(args)}
     
   override def toString =
     resolve(args).grouped(n).toList.transpose.map(_.mkString(" ")).mkString("\n")
@@ -127,8 +120,10 @@ object MatrixTest extends App {
   val a2 = Map("theta" -> 2*Math.PI)
   println(B(a2) * A)
 
+  println (B(a1))
   println (B(a1) t)
   
+  println(A t)
   println(A * 0)
   println(A * 0)
 }
