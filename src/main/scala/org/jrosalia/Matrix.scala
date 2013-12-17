@@ -38,7 +38,7 @@ class Matrix(val n: Int, val m: Int, val data: Seq[Value], val args: Map[String,
         val thisInx = i + k * n;
         val thatInx = k + j * that.m;
         op.multiply(data(thisInx), that.data(thatInx))
-      }).reduce(op.add(_, _))), args)
+      }).reduce(op.add(_, _))), args ++ that.args)
   }
 
   def t = new Matrix(m, n, (for (i <- 0 until n; j <- 0 until m) yield data(i + j * n)), args)
