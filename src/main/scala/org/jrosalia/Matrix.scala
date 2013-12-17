@@ -1,16 +1,14 @@
 package org.jrosalia
 
-abstract class SemiGroup[A] {
+abstract class SemiRing[A] {
   def add(x: A, y: A): A
   def multiply(x: A, y: A): A
-}
-
-abstract class Monoid[A] extends SemiGroup[A] {
-  def unit: A
+  def zero: A
+  def identity: A
 }
 
 import Matrix._
-class Matrix(val n: Int, val m: Int, val data: Seq[Value], val arg: Option[Double] = None)(implicit op: Monoid[Value]) {
+class Matrix(val n: Int, val m: Int, val data: Seq[Value], val arg: Option[Double] = None)(implicit op: SemiRing[Value]) {
   require(data.length == n * m)
 
   def apply(v: Double) =
@@ -20,6 +18,11 @@ class Matrix(val n: Int, val m: Int, val data: Seq[Value], val arg: Option[Doubl
     new Matrix(n, m,
       (for (j <- 0 until m; i <- 0 until n) yield
           op.add(data(i + j * n), that)), arg)
+
+  def *(that: Value) =
+    new Matrix(n, m,
+      (for (j <- 0 until m; i <- 0 until n) yield
+          op.multiply(data(i + j * n), that)), arg)
 
   def +(that: Matrix) = {
     require(this.n == that.n && this.m == that.m)
@@ -60,10 +63,14 @@ object Matrix {
 //      _ => f() + that()
 //    }
 //  }
-  implicit object FunMonoid extends Monoid[Value] {
+  implicit object FunctionSemiRing extends SemiRing[Value] {
 
-    override def unit = {
+    override def zero = {
       _ => 0.0
+    }
+
+    override def identity = {
+      _ => 1.0
     }
 
     override def add(f1: Value, f2: Value) = {
@@ -92,4 +99,7 @@ object MatrixTest extends App {
   println(B(2 * Math.PI) * A)
 
   println (B(Math.PI/2) t)
+  
+  println(A * 0)
+  println(A * 0)
 }
