@@ -56,7 +56,8 @@ object Matrix {
   type Value = Map[String,Double] => Double
 
   implicit class FuncWithArgs(f: Double => Double) {
-    def &(arg: String) =
+    
+    def apply(arg: String) =
       (args:Map[String,Double]) => f(args(arg))
   }
   
@@ -96,8 +97,8 @@ object MatrixTest extends App {
   val I = new Matrix(2, 2, List(1.0, 0.0, 0.0, 1.0))
   val A = new Matrix(2, 1, List(1.0, 1.0))
   //2D rotation matrix
-  val B = new Matrix(2, 2, List(Math.cos _ & "theta", Math.sin _ & "theta", -(Math.sin _ & "theta"), Math.cos _ & "theta"))
-//  val C = new Matrix(2, 2, List(Math.cos _ & "theta2", Math.sin _ & "theta2", -(Math.sin _ & "theta2"), Math.cos _ & "theta2"))
+  val B = new Matrix(2, 2, List((Math.cos _)("theta"), (Math.sin _)("theta"), -(Math.sin _)("theta"), (Math.cos _)("theta")))
+//  val C = new Matrix(2, 2, List((Math.cos _)("theta2"), (Math.sin _)("theta2"), -(Math.sin _)("theta2"), (Math.cos _)("theta2")))
   //TODO: remap B's arguments, to create new matrix from B with same structure but different arguments
 //  B.remap("theta" -> "theta2")
 //  println(A + 5.0)
@@ -119,8 +120,8 @@ object MatrixTest extends App {
   val a2 = Map("theta" -> 2*Math.PI)
   println(B(a2) * A)
 
-  println (B(a1))
-  println (B(a1) t)
+  println(B(a1))
+  println(B(a1) t)
   
   println(A t)
   println(A * 0)
